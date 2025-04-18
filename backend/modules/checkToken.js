@@ -1,22 +1,19 @@
-const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 
-const checkToken = (req, res, next) => {
-  const token = req.body.token || req.headers.authorization;
+function checkToken(req, res, next) {
+  const token = req.headers.authorization;
 
   if (!token) {
-    return res.status(401).json({ result: false, error: 'Token manquant' });
+    return res.status(401).json({ result: false, error: "Token manquant" });
   }
 
-  User.findOne({ token }).then(user => {
-    if (!user) {
-      return res.status(403).json({ result: false, error: 'Token invalide' });
-    }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // contient les infos (id, email...),  on stocke les infos décodées
+    next(); // on continue vers la route protégée
+  } catch (error) {
+    return res.status(401).json({ result: false, error: "Token invalide" });
+  }
+}
 
-    req.user = user; // Injecte l’utilisateur dans la requête
-    next();
-  }).catch(err => {
-    res.status(500).json({ result: false, error: 'Erreur serveur' });
-  });
-};
-
-module.exports = checkToken;
+module.exports = { checkToken };
